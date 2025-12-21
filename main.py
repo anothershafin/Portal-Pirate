@@ -74,18 +74,12 @@ def setupCamera():
 
 
 def draw_environment():
-    """
-    Draw:
-    - big green plane
-    - dark grey road strip in the middle
-    - bluish left & right walls
-    """
 
     L = 600  # half length (matches your GRID_LENGTH usage style)
 
     # Road settings
     road_half_width = 130  # road width = 260
-    road_z = 0.5           # tiny lift to avoid z-fighting with ground
+    road_z = 0.02           # tiny lift to avoid z-fighting with ground
 
     # Wall settings
     wall_height = 380
@@ -94,11 +88,19 @@ def draw_environment():
     glBegin(GL_QUADS)
 
     # ---------- Ground (green) ----------
-    glColor3f(0.44, 0.67, 0.29)  # green-ish
+    glColor3f(0.44, 0.67, 0.29)
+
+    # left green strip
     glVertex3f(-L, -L, 0)
+    glVertex3f(-road_half_width, -L, 0)
+    glVertex3f(-road_half_width, L, 0)
+    glVertex3f(-L, L, 0)
+
+    # right green strip
+    glVertex3f(road_half_width, -L, 0)
     glVertex3f(L, -L, 0)
     glVertex3f(L, L, 0)
-    glVertex3f(-L, L, 0)
+    glVertex3f(road_half_width, L, 0)
 
     # ---------- Road (dark grey strip in middle) ----------
     glColor3f(0.30, 0.30, 0.30)  # dark grey
