@@ -3,82 +3,133 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 import math
 
-# Camera-related variables (better viewing angle)
-# (x, y, z) -> x sideways, y forward/back, z height
 # camera_pos = (-450, -650, 520)
 camera_pos = (0, -650, 520)
 
 
-fovY = 95
+fovY = 120
 GRID_LENGTH = 600
 rand_var = 423
 
+# ---------------- Level Flags ----------------
+level_1_active = True
+level_2_active = False
+level_3_active = False
+level_4_active = False
+
+
+
 # ---------------- Player ----------------
 player_x = -350.0
-player_y = 0.0
+player_y = -350.0
+
+
+
+
 player_z = 0.0
 player_r = 18.0        # radius
 player_speed = 18.0
 
-# ---------------- World params (keep consistent with draw_environment) ----------------
+
 L = 600
-road_half_width = 130
-wall_thickness = 45
-wall_height = 380
+L2 = 1000
+hazard_half_width = 130
+wall_thickness = 5
+wall_height = 180
 
 left_inner_x  = -L + wall_thickness
 right_inner_x =  L - wall_thickness
 
-# ---------------- Portal ----------------
 portal_active = False
 portal_r = 45.0
-portal_z_center = 25.0  # height center of portal on the wall
+portal_z_center = 25.0
 portal_left = {"x": left_inner_x, "y": 0.0, "z": portal_z_center}
 portal_right = {"x": right_inner_x, "y": 0.0, "z": portal_z_center}
-portal_plane_eps = 6.0  # how close to the wall plane counts as "enter"
+portal_plane_eps = 6.0
 portal_cooldown = 0
+
+
+def set_active_level(level_num):
+    global level_1_active, level_2_active, level_3_active, level_4_active
+    level_1_active = level_num == 1
+    level_2_active = level_num == 2
+    level_3_active = level_num == 3
+    level_4_active = level_num == 4
 
 
 def clamp(v, lo, hi):
     return max(lo, min(hi, v))
 
 def allowed_on_green(nx, ny):
-    # Inside plane bounds (leave a margin for player radius)
+    
     if nx < -L + player_r or nx > L - player_r:
         return False
     if ny < -L + player_r or ny > L - player_r:
         return False
 
-    # Can't cross road: must stay fully on left strip OR fully on right strip
-    left_ok  = nx <= (-road_half_width - player_r)
-    right_ok = nx >= ( road_half_width + player_r)
+    left_ok  = nx <= (-hazard_half_width - player_r)
+    right_ok = nx >= ( hazard_half_width + player_r)
+    
     if not (left_ok or right_ok):
         return False
 
-    # Can't go into the walls thickness area (inner face boundary)
     if nx < left_inner_x + player_r:
         return False
+    
     if nx > right_inner_x - player_r:
         return False
 
     return True
 
+
+def allowed_on_green_level_2(nx, ny):
+    # boundaries
+    if nx < -L + player_r or nx > L - player_r:
+        return False
+    if ny < -L + player_r or ny > L - player_r:
+        return False
+
+    if ny >= 432 or ny <= -432 :
+        return True
+    
+    if ny < 432 and ny > 270:
+           if nx < -265 or nx > 265:
+            return True
+        
+    if ny < 270 and ny > -270:
+        if nx < -435 or nx > 435:
+            return True
+        
+    if ny < -270 and ny > -432:
+        if nx < -265 or nx > 265:
+            return True
+        
+
 def try_move(dx, dy):
+    
     global player_x, player_y
+    
     nx = player_x + dx
     ny = player_y + dy
-    if allowed_on_green(nx, ny):
-        player_x, player_y = nx, ny
+    if level_1_active:
+        if allowed_on_green(nx, ny):
+            player_x, player_y = nx, ny
+
+    if level_2_active :
+        if allowed_on_green_level_2(nx, ny):
+            player_x, player_y = nx, ny
 
 def draw_player():
+    
     glPushMatrix()
+    
     glTranslatef(player_x, player_y, player_z + player_r)
-
-    # Contrasty color vs green: orange-red
+     
+    # player shape needs to change!!!
+    
     glColor3f(1.0, 0.25, 0.10)
     glutSolidSphere(player_r, 16, 16)
 
-    # tiny "cap" cube to look like a character
     glTranslatef(0, 0, player_r + 8)
     glColor3f(1.0, 0.85, 0.10)
     glutSolidCube(14)
@@ -94,10 +145,10 @@ def spawn_portals():
     portal_left  = {"x": left_inner_x,  "y": y_on_wall, "z": portal_z_center}
     portal_right = {"x": right_inner_x, "y": y_on_wall, "z": portal_z_center}
 
+    # portal_up  = {"x": left_inner_x,  "y": y_on_wall, "z": portal_z_center}
+    # portal_down = {"x": right_inner_x, "y": y_on_wall, "z": portal_z_center}
+    
     portal_active = True
-
-
-
 
 def draw_portal_at(x_plane, cy, cz):
     # circle in the Y-Z plane at fixed X (wall plane)
@@ -111,17 +162,41 @@ def draw_portal_at(x_plane, cy, cz):
         glVertex3f(x_plane, yy, zz)
     glEnd()
 
+
 def draw_portals():
+    
     if not portal_active:
         return
 
     # draw on inner faces; add a tiny epsilon so it doesn't z-fight with wall
+    if (level_2_active or level_3_active or level_4_active) and in_minor_hazard_zone(player_x, player_y):
+        return  
+
     draw_portal_at(left_inner_x + 0.2,  portal_left["y"],  portal_left["z"])
     draw_portal_at(right_inner_x - 0.2, portal_right["y"], portal_right["z"])
 
 
+def in_minor_hazard_zone(px, py):
+    
+    if level_2_active:
+        if py > 432 or py < -432:
+            if px > -265 and px < 265:
+                return True
+
+        if px > 265 or px < -265:
+            if py < 270 and py > -270:
+                return True
+
 def try_teleport():
+    
     global player_x, player_y, portal_cooldown
+
+    if not portal_active or portal_cooldown > 0:
+        return
+
+    # restrict portal usage in yellow zone for level 2–4
+    if (level_2_active or level_3_active or level_4_active) and in_minor_hazard_zone(player_x, player_y):
+        return
 
     if not portal_active:
         return
@@ -134,7 +209,6 @@ def try_teleport():
     entry_left_x  = left_inner_x + player_r
     entry_right_x = right_inner_x - player_r
 
-    # ✅ tolerance must be >= movement jump size, otherwise you may never "hit" it
     x_tol = player_speed  # 18.0
 
     # ---- Enter LEFT portal -> Exit RIGHT portal ----
@@ -156,8 +230,6 @@ def try_teleport():
             player_y = portal_left["y"]
             portal_cooldown = 6
             return
-
-
 
 
 def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
@@ -203,7 +275,16 @@ def keyboardListener(key, x, y):
     elif key == b'1':
         spawn_portals()
 
-    # check teleport after moving (or even after spawning)
+    elif key == b'0':
+        set_active_level(1)
+    elif key == b'9':
+        set_active_level(2)
+    elif key == b'8':
+        set_active_level(3)
+    elif key == b'7':
+        set_active_level(4)
+    
+    
     try_teleport()
 
     glutPostRedisplay()
@@ -245,17 +326,13 @@ def setupCamera():
     )
 
 
-def draw_environment():
+def draw_level_1():
+    global  L, hazard_half_width, wall_height, wall_height
+    # L = 600  # half length (matches your GRID_LENGTH usage style)
 
-    L = 600  # half length (matches your GRID_LENGTH usage style)
-
-    # Road settings
-    road_half_width = 130  # road width = 260
-    road_z = 0.02           # tiny lift to avoid z-fighting with ground
-
-    # Wall settings
-    wall_height = 380
-    wall_thickness = 45
+    # Hazard settings
+    # hazard_half_width = 130  # hazard zone width = 260
+    hazard_z = 0.02          
 
     glBegin(GL_QUADS)
 
@@ -264,22 +341,22 @@ def draw_environment():
 
     # left green strip
     glVertex3f(-L, -L, 0)
-    glVertex3f(-road_half_width, -L, 0)
-    glVertex3f(-road_half_width, L, 0)
+    glVertex3f(-hazard_half_width, -L, 0)
+    glVertex3f(-hazard_half_width, L, 0)
     glVertex3f(-L, L, 0)
 
     # right green strip
-    glVertex3f(road_half_width, -L, 0)
+    glVertex3f(hazard_half_width, -L, 0)
     glVertex3f(L, -L, 0)
     glVertex3f(L, L, 0)
-    glVertex3f(road_half_width, L, 0)
+    glVertex3f(hazard_half_width, L, 0)
 
-    # ---------- Road (dark grey strip in middle) ----------
+    # ---------- Hazardous Zone (dark grey strip in middle) ----------
     glColor3f(0.30, 0.30, 0.30)  # dark grey
-    glVertex3f(-road_half_width, -L, road_z)
-    glVertex3f(road_half_width, -L, road_z)
-    glVertex3f(road_half_width, L, road_z)
-    glVertex3f(-road_half_width, L, road_z)
+    glVertex3f(-hazard_half_width, -L, hazard_z)
+    glVertex3f(hazard_half_width, -L, hazard_z)
+    glVertex3f(hazard_half_width, L, hazard_z)
+    glVertex3f(-hazard_half_width, L, hazard_z)
 
     # ---------- Left wall (bluish) ----------
     # A rectangular vertical wall along the left side of the plane.
@@ -293,23 +370,24 @@ def draw_environment():
     glVertex3f(left_inner_x, L, wall_height)
     glVertex3f(left_inner_x, -L, wall_height)
 
-    # Wall top
-    glVertex3f(left_outer_x, -L, wall_height)
-    glVertex3f(left_outer_x, L, wall_height)
-    glVertex3f(left_inner_x, L, wall_height)
-    glVertex3f(left_inner_x, -L, wall_height)
+    # # Wall top
+    # glVertex3f(left_outer_x, -L, wall_height)
+    # glVertex3f(left_outer_x, L, wall_height)
+    # glVertex3f(left_inner_x, L, wall_height)
+    # glVertex3f(left_inner_x, -L, wall_height)
 
-    # Wall outer face (optional but makes it look like a slab)
-    glColor3f(0.60, 0.70, 0.88)
-    glVertex3f(left_outer_x, -L, 0)
-    glVertex3f(left_outer_x, L, 0)
-    glVertex3f(left_outer_x, L, wall_height)
-    glVertex3f(left_outer_x, -L, wall_height)
+    # # Wall outer face (optional but makes it look like a slab)
+    # glColor3f(0.60, 0.70, 0.88)
+    # glVertex3f(left_outer_x, -L, 0)
+    # glVertex3f(left_outer_x, L, 0)
+    # glVertex3f(left_outer_x, L, wall_height)
+    # glVertex3f(left_outer_x, -L, wall_height)
 
     # ---------- Right wall (bluish) ----------
     glColor3f(0.70, 0.78, 0.92)
+    
     right_outer_x = L
-    right_inner_x = L - wall_thickness
+    right_inner_x = L #- wall_thickness
 
     # Wall face (inner face visible from center)
     glVertex3f(right_inner_x, -L, 0)
@@ -317,20 +395,112 @@ def draw_environment():
     glVertex3f(right_inner_x, L, wall_height)
     glVertex3f(right_inner_x, -L, wall_height)
 
-    # Wall top
-    glVertex3f(right_inner_x, -L, wall_height)
-    glVertex3f(right_inner_x, L, wall_height)
-    glVertex3f(right_outer_x, L, wall_height)
-    glVertex3f(right_outer_x, -L, wall_height)
+    # # Wall top
+    # glVertex3f(right_inner_x, -L, wall_height)
+    # glVertex3f(right_inner_x, L, wall_height)
+    # glVertex3f(right_outer_x, L, wall_height)
+    # glVertex3f(right_outer_x, -L, wall_height)
 
-    # Wall outer face
-    glColor3f(0.60, 0.70, 0.88)
-    glVertex3f(right_outer_x, -L, 0)
-    glVertex3f(right_outer_x, L, 0)
-    glVertex3f(right_outer_x, L, wall_height)
-    glVertex3f(right_outer_x, -L, wall_height)
+    # # Wall outer face
+    # glColor3f(0.60, 0.70, 0.88)
+    # glVertex3f(right_outer_x, -L, 0)
+    # glVertex3f(right_outer_x, L, 0)
+    # glVertex3f(right_outer_x, L, wall_height)
+    # glVertex3f(right_outer_x, -L, wall_height)
 
     glEnd()
+
+
+def draw_level_2():
+    
+    
+    # 5×5 pattern: 1=green, 2=yellow, 3=red
+    pattern = [
+        [1, 1, 2, 2, 2, 1, 1],
+        [1, 1, 3, 3, 3, 1, 1],
+        [2, 3, 3, 3, 3, 3, 2],
+        [2, 3, 3, 3, 3, 3, 2],
+        [2, 3, 3, 3, 3, 3, 2],
+        [1, 1, 3, 3, 3, 1, 1],
+        [1, 1, 2, 2, 2, 1, 1]
+    ]
+
+    # Colors
+    color_map = {
+        1: (0.44, 0.67, 0.29),  # green
+        2: (0.95, 0.85, 0.10),  # yellow
+        3: (0.85, 0.10, 0.10),  # red
+    }
+
+    # Cell geometry
+    cols = 7
+    rows = 7
+    cell_w = (2 * L) / cols
+    cell_h = (2 * L) / rows
+    start_x = -L
+    start_y = -L
+
+    
+    
+    glBegin(GL_QUADS)
+
+    def draw_cell(col, row, val):
+        x0 = start_x + col * cell_w
+        x1 = x0 + cell_w
+        y0 = start_y + row * cell_h
+        y1 = y0 + cell_h
+        glColor3f(*color_map[val])
+        glVertex3f(x0, y0, 0)
+        glVertex3f(x1, y0, 0)
+        glVertex3f(x1, y1, 0)
+        glVertex3f(x0, y1, 0)
+
+    for row in range(rows):
+        for col in range(cols):
+            draw_cell(col, row, pattern[row][col])
+    
+    glColor3f(0.70, 0.78, 0.92)
+    
+    # ---------- Top wall  ----------
+    glVertex3f(-left_inner_x, L, 0)
+    glVertex3f(left_inner_x, L, 0)
+    glVertex3f(left_inner_x, L, wall_height)
+    glVertex3f(-left_inner_x, L, wall_height)
+    
+    
+    # ---------- Left wall 
+    glVertex3f(-L, -L, 0)
+    glVertex3f(-L, L, 0)
+    glVertex3f(-L, L, wall_height)
+    glVertex3f(-L, -L, wall_height)
+    
+    
+    # ---------- Right wall
+    glVertex3f(right_inner_x, -L, 0)
+    glVertex3f(right_inner_x, L, 0)
+    glVertex3f(right_inner_x, L, wall_height)
+    glVertex3f(right_inner_x, -L, wall_height)
+    
+    
+     # ---------- Bottom wall  ----------
+    glVertex3f(-left_inner_x, -L, 0)
+    glVertex3f(left_inner_x, -L, 0)
+    glVertex3f(left_inner_x, -L, wall_height)
+    glVertex3f(-left_inner_x, -L, wall_height)
+    
+    glEnd()
+
+
+def draw_environment():
+    
+    if level_1_active:
+        draw_level_1()
+    elif level_2_active:
+        draw_level_2()    
+    elif level_3_active:
+        draw_level_2()  # placeholder
+    elif level_4_active:
+        draw_level_2()  # placeholder
 
 
 def idle():
@@ -345,14 +515,13 @@ def showScreen():
     setupCamera()
 
     draw_environment()
-
     # portals should be drawn after walls exist
     draw_portals()
 
     # draw player on top
     draw_player()
 
-    draw_text(10, 770, "WASD move | 1 spawn portals")
+    # draw_text(10, 770, "WASD move | 1 spawn portals")
     draw_text(10, 740, f"Player: ({player_x:.1f}, {player_y:.1f})")
 
     glutSwapBuffers()
