@@ -5,8 +5,8 @@ import math
 import random
 
 
-# camera_pos = (-450, -650, 520)
-camera_pos = (0, -650, 520)
+camera_pos = (-450, -650, 520)
+#camera_pos = (0, -650, 520)
 
 
 fovY = 120
@@ -634,8 +634,8 @@ def draw_level_1():
     glVertex3f(L, L, 0)
     glVertex3f(hazard_half_width, L, 0)
 
-    # ---------- Hazardous Zone (dark grey strip in middle) ----------
-    glColor3f(0.30, 0.30, 0.30)  # dark grey
+    # ---------- Hazardous Zone  ----------
+    glColor3f(0.8, 0.0, 0.0)
     glVertex3f(-hazard_half_width, -L, hazard_z)
     glVertex3f(hazard_half_width, -L, hazard_z)
     glVertex3f(hazard_half_width, L, hazard_z)
