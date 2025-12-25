@@ -22,15 +22,19 @@ level_4_active = False
 # ---------------- Player ----------------
 player_x = -350.0
 player_y = -350.0
+score = 0
+lives = 3
 
+base_player_speed = 18.0
+player_speed = base_player_speed
 
-
+speed_boost_active = False
+speed_boost_end_time = 0  
 
 player_z = 0.0
 player_r = 18.0        # radius
-player_speed = 18.0
 
-
+# ---------------- World Building ----------------
 L = 600
 L2 = 1000
 hazard_half_width = 130
@@ -40,11 +44,17 @@ wall_height = 180
 left_inner_x  = -L + wall_thickness
 right_inner_x =  L - wall_thickness
 
-portal_active = False
+
+portal_lr_active = False   # left , right
+portal_ud_active = False   # up , down
+
 portal_r = 45.0
 portal_z_center = 25.0
 portal_left = {"x": left_inner_x, "y": 0.0, "z": portal_z_center}
 portal_right = {"x": right_inner_x, "y": 0.0, "z": portal_z_center}
+portal_top = {"x": 0.0, "y": L - wall_thickness, "z": portal_z_center}
+portal_bottom = {"x": 0.0, "y": -L + wall_thickness, "z": portal_z_center}
+
 portal_plane_eps = 6.0
 portal_cooldown = 0
 
@@ -119,6 +129,7 @@ def try_move(dx, dy):
         if allowed_on_green_level_2(nx, ny):
             player_x, player_y = nx, ny
 
+
 def draw_player():
     
     glPushMatrix()
@@ -136,34 +147,53 @@ def draw_player():
 
     glPopMatrix()
 
-# def toggle_portals():
-#     #Not Currently in use 
-#     global portal_active, portal_cooldown
 
-#     if portal_active:
-#         portal_active = False
-#         portal_cooldown = 0
-#     else:
-#         spawn_portals()
+def spawn_horizontal_portals():
+    global portal_lr_active, portal_left, portal_right
 
-
-def spawn_portals():
-    global portal_active, portal_left, portal_right
-
-    # portal appears on both walls at the player's current Y (clamped)
     y_on_wall = clamp(player_y, -L + portal_r, L - portal_r)
 
     portal_left  = {"x": left_inner_x,  "y": y_on_wall, "z": portal_z_center}
     portal_right = {"x": right_inner_x, "y": y_on_wall, "z": portal_z_center}
 
-    # portal_up  = {"x": left_inner_x,  "y": y_on_wall, "z": portal_z_center}
-    # portal_down = {"x": right_inner_x, "y": y_on_wall, "z": portal_z_center}
-    
-    portal_active = True
+    portal_lr_active = True
+
+
+def spawn_vertical_portals():
+    global portal_ud_active, portal_top, portal_bottom
+
+    x_on_wall = clamp(player_x, -L + portal_r, L - portal_r)
+
+    portal_top    = {"x": x_on_wall, "y": L - wall_thickness, "z": portal_z_center}
+    portal_bottom = {"x": x_on_wall, "y": -L + wall_thickness, "z": portal_z_center}
+
+    portal_ud_active = True
+
+
+def toggle_horizontal_portals():
+    global portal_lr_active, portal_ud_active, portal_cooldown
+
+    if portal_lr_active:
+        portal_lr_active = False
+        portal_cooldown = 0
+    else:
+        portal_ud_active = False
+        spawn_horizontal_portals()
+
+
+def toggle_vertical_portals():
+    global portal_lr_active, portal_ud_active, portal_cooldown
+
+    if portal_ud_active:
+        portal_ud_active = False
+        portal_cooldown = 0
+    else:
+        portal_lr_active = False
+        spawn_vertical_portals()
 
 
 def draw_portal_at(x_plane, cy, cz):
-    # circle in the Y-Z plane at fixed X (wall plane)
+    
     glColor3f(0.0, 0.0, 0.0)
     glBegin(GL_TRIANGLE_FAN)
     glVertex3f(x_plane, cy, cz)
@@ -173,18 +203,29 @@ def draw_portal_at(x_plane, cy, cz):
         zz = cz + portal_r * math.sin(ang)
         glVertex3f(x_plane, yy, zz)
     glEnd()
+    
+    
+def draw_portal_at_y(y_plane, cx, cz):
+    glColor3f(0.0, 0.0, 0.0)
+    glBegin(GL_TRIANGLE_FAN)
+    glVertex3f(cx, y_plane, cz)
+    for i in range(0, 41):
+        ang = (2.0 * math.pi * i) / 40.0
+        xx = cx + portal_r * math.cos(ang)
+        zz = cz + portal_r * math.sin(ang)
+        glVertex3f(xx, y_plane, zz)
+    glEnd()
 
 
 def draw_portals():
     
-    if not portal_active:
-        return
+    if portal_lr_active:
+        draw_portal_at(left_inner_x + 0.2,  portal_left["y"],  portal_left["z"])
+        draw_portal_at(right_inner_x - 0.2, portal_right["y"], portal_right["z"])
 
-    # draw on inner faces; add a tiny epsilon so it doesn't z-fight with wall
-    
-
-    draw_portal_at(left_inner_x + 0.2,  portal_left["y"],  portal_left["z"])
-    draw_portal_at(right_inner_x - 0.2, portal_right["y"], portal_right["z"])
+    if portal_ud_active:
+        draw_portal_at_y(L - wall_thickness - 0.2, portal_top["x"], portal_top["z"])
+        draw_portal_at_y(-L + wall_thickness + 0.2, portal_bottom["x"], portal_bottom["z"])
 
 
 def in_minor_hazard_zone(px, py):
@@ -198,49 +239,73 @@ def in_minor_hazard_zone(px, py):
             if py < 270 and py > -270:
                 return True
 
+
 def try_teleport():
     
     global player_x, player_y, portal_cooldown
 
-    if not portal_active or portal_cooldown > 0:
+    if  portal_cooldown > 0:
         return
-
-    # restrict portal usage in yellow zone for level 2–4
+    
     if (level_2_active or level_3_active or level_4_active) and in_minor_hazard_zone(player_x, player_y):
         return
 
-    if not portal_active:
-        return
 
     if portal_cooldown > 0:
         return
-
+    
     pz = player_z + player_r
 
-    entry_left_x  = left_inner_x + player_r
-    entry_right_x = right_inner_x - player_r
+    if portal_lr_active:
+        
+        entry_left_x  = left_inner_x + player_r
+        entry_right_x = right_inner_x - player_r
+        x_tol = player_speed  # 18.0
 
-    x_tol = player_speed  # 18.0
+        # ---- Enter LEFT portal -> Exit RIGHT portal ----
+        if abs(player_x - entry_left_x) <= x_tol:
+            dy = player_y - portal_left["y"]
+            dz = pz - portal_left["z"]
+            if (dy * dy + dz * dz) <= (portal_r * portal_r):
+                player_x = right_inner_x - player_r - 8
+                player_y = portal_right["y"]
+                portal_cooldown = 6
+                return
 
-    # ---- Enter LEFT portal -> Exit RIGHT portal ----
-    if abs(player_x - entry_left_x) <= x_tol:
-        dy = player_y - portal_left["y"]
-        dz = pz - portal_left["z"]
-        if (dy * dy + dz * dz) <= (portal_r * portal_r):
-            player_x = right_inner_x - player_r - 8
-            player_y = portal_right["y"]
-            portal_cooldown = 6
-            return
+        # ---- Enter RIGHT portal -> Exit LEFT portal ----
+        if abs(player_x - entry_right_x) <= x_tol:
+            dy = player_y - portal_right["y"]
+            dz = pz - portal_right["z"]
+            if (dy * dy + dz * dz) <= (portal_r * portal_r):
+                player_x = left_inner_x + player_r + 8
+                player_y = portal_left["y"]
+                portal_cooldown = 6
+                return
 
-    # ---- Enter RIGHT portal -> Exit LEFT portal ----
-    if abs(player_x - entry_right_x) <= x_tol:
-        dy = player_y - portal_right["y"]
-        dz = pz - portal_right["z"]
-        if (dy * dy + dz * dz) <= (portal_r * portal_r):
-            player_x = left_inner_x + player_r + 8
-            player_y = portal_left["y"]
-            portal_cooldown = 6
-            return
+    if portal_ud_active:            
+        entry_top_y = L - player_r
+        entry_bottom_y = -L + player_r
+        y_tol = player_speed
+
+        # ---- Enter TOP portal -> Exit BOTTOM ----
+        if abs(player_y - entry_top_y) <= y_tol:
+            dx = player_x - portal_top["x"]
+            dz = pz - portal_top["z"]
+            if (dx * dx + dz * dz) <= (portal_r * portal_r):
+                player_y = -L + player_r + 8
+                player_x = portal_bottom["x"]
+                portal_cooldown = 6
+                return
+
+        # ---- Enter BOTTOM portal -> Exit TOP ----
+        if abs(player_y - entry_bottom_y) <= y_tol:
+            dx = player_x - portal_bottom["x"]
+            dz = pz - portal_bottom["z"]
+            if (dx * dx + dz * dz) <= (portal_r * portal_r):
+                player_y = L - player_r - 8
+                player_x = portal_top["x"]
+                portal_cooldown = 6
+                return
 
 
 def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
@@ -282,11 +347,16 @@ def keyboardListener(key, x, y):
         try_move(player_speed, 0)
 
     # spawn portal pair
-    elif key == b'1' :
-        if not ((level_2_active or level_3_active or level_4_active) and in_minor_hazard_zone(player_x, player_y)):  
-            # toggle_portals()
-            spawn_portals()
+    elif key == b'1':
+        if not ((level_2_active or level_3_active or level_4_active) and in_minor_hazard_zone(player_x, player_y)):
+            toggle_horizontal_portals()
 
+    elif key == b'2':
+        if not ((level_2_active or level_3_active or level_4_active) and in_minor_hazard_zone(player_x, player_y)):
+            toggle_vertical_portals()
+
+    
+    
     elif key == b'0':
         set_active_level(1)
     elif key == b'9':
@@ -510,7 +580,7 @@ def draw_environment():
     elif level_2_active:
         draw_level_2()    
     elif level_3_active:
-        draw_level_2()  # placeholder
+        draw_level_1()  # placeholder
     elif level_4_active:
         draw_level_2()  # placeholder
 
@@ -537,7 +607,6 @@ def showScreen():
     draw_text(10, 740, f"Player: ({player_x:.1f}, {player_y:.1f})")
 
     glutSwapBuffers()
-
 
 
 def main():
