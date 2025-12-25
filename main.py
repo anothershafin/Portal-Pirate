@@ -3,9 +3,6 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 import math
 
-# Camera-related variables (better viewing angle)
-# (x, y, z) -> x sideways, y forward/back, z height
-# camera_pos = (-450, -650, 520)
 camera_pos = (0, -650, 520)
 
 
