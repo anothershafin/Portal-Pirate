@@ -136,6 +136,17 @@ def draw_player():
 
     glPopMatrix()
 
+# def toggle_portals():
+#     #Not Currently in use 
+#     global portal_active, portal_cooldown
+
+#     if portal_active:
+#         portal_active = False
+#         portal_cooldown = 0
+#     else:
+#         spawn_portals()
+
+
 def spawn_portals():
     global portal_active, portal_left, portal_right
 
@@ -149,6 +160,7 @@ def spawn_portals():
     # portal_down = {"x": right_inner_x, "y": y_on_wall, "z": portal_z_center}
     
     portal_active = True
+
 
 def draw_portal_at(x_plane, cy, cz):
     # circle in the Y-Z plane at fixed X (wall plane)
@@ -169,8 +181,7 @@ def draw_portals():
         return
 
     # draw on inner faces; add a tiny epsilon so it doesn't z-fight with wall
-    if (level_2_active or level_3_active or level_4_active) and in_minor_hazard_zone(player_x, player_y):
-        return  
+    
 
     draw_portal_at(left_inner_x + 0.2,  portal_left["y"],  portal_left["z"])
     draw_portal_at(right_inner_x - 0.2, portal_right["y"], portal_right["z"])
@@ -255,9 +266,8 @@ def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
 
 
 def keyboardListener(key, x, y):
-    global portal_cooldown
+    global portal_cooldown , player_x, player_y
 
-    # decrease cooldown over keypresses
     if portal_cooldown > 0:
         portal_cooldown -= 1
 
@@ -272,8 +282,10 @@ def keyboardListener(key, x, y):
         try_move(player_speed, 0)
 
     # spawn portal pair
-    elif key == b'1':
-        spawn_portals()
+    elif key == b'1' :
+        if not ((level_2_active or level_3_active or level_4_active) and in_minor_hazard_zone(player_x, player_y)):  
+            # toggle_portals()
+            spawn_portals()
 
     elif key == b'0':
         set_active_level(1)

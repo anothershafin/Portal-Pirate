@@ -9,7 +9,7 @@ import math
 camera_pos = (0, -650, 520)
 
 
-fovY = 95
+fovY = 100
 GRID_LENGTH = 600
 rand_var = 423
 
@@ -95,8 +95,6 @@ def spawn_portals():
     portal_right = {"x": right_inner_x, "y": y_on_wall, "z": portal_z_center}
 
     portal_active = True
-
-
 
 
 def draw_portal_at(x_plane, cy, cz):
