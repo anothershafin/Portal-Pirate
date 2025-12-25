@@ -829,7 +829,7 @@ def main():
     glutInitWindowPosition(0, 0)
     glutCreateWindow(b"3D Environment (Template Style)")
 
-    glEnable(GL_DEPTH_TEST)  # IMPORTANT: depth on (your template clears depth buffer)
+    glEnable(GL_DEPTH_TEST)
 
     glutDisplayFunc(showScreen)
     glutKeyboardFunc(keyboardListener)
