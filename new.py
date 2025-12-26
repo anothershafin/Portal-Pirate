@@ -9,7 +9,7 @@ camera_pos = (-450, -650, 520)
 #camera_pos = (0, -650, 520)
 
 
-fovY = 120
+fovY = 90
 GRID_LENGTH = 600
 rand_var = 423
 
