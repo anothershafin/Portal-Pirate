@@ -150,6 +150,29 @@ portal_plane_eps = 6.0
 portal_cooldown = 0
 
 
+# ---------------- Enemy (Level 1) ----------------
+enemy1 = {
+    "x": 350.0,     # opposite green lane
+    "y": -300.0,
+    "z": 18.0,
+    "r": 18.0,
+    "speed":0.5,
+    "dir": 1,       # +1 or -1 for patrol direction
+    "active": True
+}
+def on_left_lane(x):
+    return x < -hazard_half_width
+
+def on_right_lane(x):
+    return x > hazard_half_width
+
+def player_on_enemy_side():
+    if on_left_lane(enemy1["x"]):
+        return on_left_lane(player_x)
+    else:
+        return on_right_lane(player_x)
+
+
 def set_active_level(level_num):
     global level_1_active, level_2_active, level_3_active, level_4_active
     level_1_active = level_num == 1
@@ -374,6 +397,17 @@ def draw_player():
     glutSolidCube(14)
 
     glPopMatrix()
+
+def draw_enemy_level_1():
+    if not enemy1["active"]:
+        return
+
+    glPushMatrix()
+    glTranslatef(enemy1["x"], enemy1["y"], enemy1["z"])
+    glColor3f(0.2, 0.2, 0.8)  # blue enemy
+    glutSolidSphere(enemy1["r"], 16, 16)
+    glPopMatrix()
+
 
 def draw_rewards():
     for r in rewards:
@@ -918,9 +952,44 @@ def draw_environment():
         draw_level_3()
 
 
+def update_enemy_level_1():
+    if not enemy1["active"]:
+        return
+
+    ex, ey = enemy1["x"], enemy1["y"]
+
+    # -------- CASE 1: Player NOT on enemy side → patrol --------
+    if not player_on_enemy_side():
+        enemy1["y"] += enemy1["speed"] * enemy1["dir"]
+
+        # bounce back at lane limits
+        if ey > L - 50:
+            enemy1["dir"] = -1
+        elif ey < -L + 50:
+            enemy1["dir"] = 1
+
+    # -------- CASE 2: Player on enemy side → chase --------
+    else:
+        dx = player_x - ex
+        dy = player_y - ey
+        dist = math.sqrt(dx*dx + dy*dy)
+
+        if dist > 0:
+            enemy1["x"] += enemy1["speed"] * (dx / dist)
+            enemy1["y"] += enemy1["speed"] * (dy / dist)
+
+    # ensure enemy never leaves green
+    if not allowed_on_green(enemy1["x"], enemy1["y"]):
+        enemy1["dir"] *= -1
+
+
 
 def idle():
     global speed_boost_timer, player_speed
+
+    if level_1_active:
+        update_enemy_level_1()
+
 
     if speed_boost_timer > 0:
         speed_boost_timer -= 1
@@ -951,6 +1020,10 @@ def showScreen():
     draw_text(10, 740, f"Player: ({player_x:.1f}, {player_y:.1f})")
     draw_text(10, 770, f"Score: {score}")
     draw_text(10, 710, f"Lives: {lives}")
+
+    if level_1_active:
+        draw_enemy_level_1()
+
 
     glutSwapBuffers()
 
