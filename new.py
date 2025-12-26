@@ -5,62 +5,68 @@ import math
 import random
 
 
-camera_pos = (-450, -650, 520)
-#camera_pos = (0, -650, 520)
+#camera_pos = (-450, -650, 520)
+camera_pos = (0, -800, 520)
 
 
-fovY = 90
-GRID_LENGTH = 600
-rand_var = 423
+fovY=90
+GRID_LENGTH=600
+rand_var=423
 
-# ---------------- Level Flags ----------------
-level_1_active = True
-level_2_active = False
-level_3_active = False
-level_4_active = False
+#Level Flags 
+level_1_active=True
+level_2_active=False
+level_3_active=False
+level_4_active=False
 
 
 
-# ---------------- Player ----------------
-player_x = -350.0
-player_y = -350.0
-score = 0
+#  Player 
+player_x=-350.0
+player_y=-350.0
+score=0
 
-MAX_LIVES = 5
-lives = MAX_LIVES
+MAX_LIVES=5
+lives=MAX_LIVES
 
-cheat_freeze_enemies = False
+#  GUARD MODE (score multiple of 50) 
+FPS=60   
+GUARD_DURATION_FRAMES=5*FPS
 
-game_over = False
-RESTART_LIVES =5
+guard_active = False
+guard_timer = 0      
+guard_last_used_score = -1 
 
-level_start_spawn_x = player_x
-level_start_spawn_y = player_y
+
+cheat_freeze_enemies=False
+
+game_over=False
+RESTART_LIVES=5
+
+level_start_spawn_x=player_x
+level_start_spawn_y=player_y
 
 player_spawn_positions = {
-    2: (-350, -350),   # Level 1 spawn
-    3: ( -350, -350),   # Level 2 spawn
+    2: (-350, -350),   
+    3: ( -350, -350),   
 }
 
-base_player_speed = 18.0
-player_speed = base_player_speed
+base_player_speed=18.0
+player_speed=base_player_speed
 
-speed_boost_timer = 0
+speed_boost_timer=0
 
-player_z = 0.0
-player_r = 18.0        # radius
+player_z=0.0
+player_r=18.0        
 
-# ---------------- TNT bombs ----------------
+# TNT bombs 
 tnt_bombs = [
     {"x": -476, "y": 300,  "r": 28.0},
     {"x":  480, "y": -302, "r": 28.0},
 ]
 
-
-
-
-# ---------------- Rewards ----------------
-rewards = []
+#  Rewards 
+rewards=[]
 reward_config = {
     1: {
         "small": 5,
@@ -110,10 +116,10 @@ reward_config = {
     
 }
 
-# ---------------- World Building ----------------
+#  World Building 
 L = 600
 
-# ---------------- Level 2 Grid ----------------
+#  Level 2 Grid 
 LEVEL2_PATTERN = [
     [1, 1, 2, 2, 2, 1, 1],
     [1, 1, 3, 3, 3, 1, 1],
@@ -123,8 +129,8 @@ LEVEL2_PATTERN = [
     [1, 1, 3, 3, 3, 1, 1],
     [1, 1, 2, 2, 2, 1, 1]
 ]
-LEVEL2_ROWS = 7
-LEVEL2_COLS = 7
+LEVEL2_ROWS=7
+LEVEL2_COLS=7
 
 L2 = 1000
 hazard_half_width = 130
@@ -132,11 +138,11 @@ wall_thickness = 5
 wall_height = 180
 
 
-# ---------------- Level 3 Grid ----------------
+#  Level 3 Grid 
 LEVEL3_PATTERN = [
-    # 1 = green (walk + portal allowed)
-    # 2 = yellow (walk allowed, portal NOT allowed)
-    # 3 = red (blocked)
+    # 1 = green 
+    # 2 = yellow 
+    # 3 = red 
     [1,1,1,1,1,3,3,1,1,3,1,1],
     [3,3,3,3,3,3,3,1,1,3,1,1],
     [1,1,1,1,1,3,3,1,1,3,1,1],
@@ -158,8 +164,8 @@ left_inner_x  = -L + wall_thickness
 right_inner_x =  L - wall_thickness
 
 
-portal_lr_active = False   # left , right
-portal_ud_active = False   # up , down
+portal_lr_active = False  
+portal_ud_active = False 
 
 portal_r = 90.0
 portal_z_center = 25.0
@@ -172,16 +178,39 @@ portal_plane_eps = 6.0
 portal_cooldown = 0
 
 
-# ----------------Level 1 Enemies ----------------
+#Level 1 Enemies 
 enemy1 = {
     "x": 350.0,     # opposite green lane
     "y": -300.0,
     "z": 18.0,
     "r": 18.0,
     "speed":0.1,
-    "dir": 1,       # +1 or -1 for patrol direction
+    "dir": 1,      
     "active": True
 }
+
+import math
+
+def guard_is_available():
+    return (not guard_active) and (score > 0) and (score % 50 == 0) and (score != guard_last_used_score)
+
+def draw_guard_sphere():
+
+    glPushMatrix()
+    glTranslatef(player_x, player_y, player_z + player_r)
+
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    glDisable(GL_LIGHTING)  
+
+    glColor4f(0.40, 0.80, 1.00, 0.25)  
+    glutSolidSphere(player_r * 2.2, 20, 20)
+
+    glEnable(GL_LIGHTING)
+    glDisable(GL_BLEND)
+    glPopMatrix()
+
+
 def on_left_lane(x):
     return x < -hazard_half_width
 
@@ -195,11 +224,11 @@ def player_on_enemy_side():
         return on_right_lane(player_x)
 
 
-# ---------------- Level 2 Enemies----------------
+#  Level 2 Enemies
 enemy_L2_type1 = []   # TL and BR
-enemy_L2_type2 = None # TR turret
+enemy_L2_type2 = None 
 
-bullets = []          # bullets shot by type2 enemy
+bullets = [] 
 
 
 def spawn_level2_enemies():
@@ -239,23 +268,19 @@ def spawn_level2_enemies():
         "home": "TR",
         "x": 520, "y": 520,
         "r": 18.0,
-        "angle": 0.0,        # spinning angle in degrees
-        "spin_speed": 0.2,   # degrees per frame
-        "fire_cd": 0         # cooldown frames
+        "angle": 0.0,        
+        "spin_speed": 0.2,   
+        "fire_cd": 0   
     }
 
 
-# ---------------- Level 3 Enemies ----------------
+#  Level 3 Enemies 
 enemy_L3_type1 = []
 enemy_L3_type2 = []   
 bullets_L3 = [] 
 
 
 def level3_world_center_of_cell(row, col):
-    """
-    row, col are 0-indexed (like LEVEL3_PATTERN indexing).
-    Returns world-space center (x,y) for that cell.
-    """
     cols = LEVEL3_COLS
     rows = LEVEL3_ROWS
     cell_w = (2 * L) / cols
@@ -267,11 +292,7 @@ def level3_world_center_of_cell(row, col):
     return x, y
 
 def level3_rect_bounds(r1, c1, r2, c2, margin=8.0):
-    """
-    r1,c1,r2,c2 are 1-indexed IN YOUR INSTRUCTIONS.
-    Returns (xmin, xmax, ymin, ymax) bounds in world space,
-    slightly shrunk by margin so enemy doesn't touch edges.
-    """
+
     cols = LEVEL3_COLS
     rows = LEVEL3_ROWS
     cell_w = (2 * L) / cols
@@ -279,7 +300,6 @@ def level3_rect_bounds(r1, c1, r2, c2, margin=8.0):
     start_x = -L
     start_y = -L
 
-    # convert to 0-index inclusive ranges
     rr1 = r1 - 1
     cc1 = c1 - 1
     rr2 = r2 - 1
@@ -404,7 +424,7 @@ def update_level3_type1_enemy(e):
     bounds = e["home_bounds"]
     xmin, xmax, ymin, ymax = bounds
 
-    # If player is inside THIS enemy’s rectangle -> chase
+
     if point_in_bounds(player_x, player_y, bounds):
         dx = player_x - e["x"]
         dy = player_y - e["y"]
@@ -412,7 +432,6 @@ def update_level3_type1_enemy(e):
         e["x"] += (dx/d) * e["speed"]
         e["y"] += (dy/d) * e["speed"]
     else:
-        # Roam (simple bounce inside rectangle)
         e["x"] += e["dirx"] * e["speed"]
         e["y"] += e["diry"] * e["speed"]
 
@@ -421,7 +440,6 @@ def update_level3_type1_enemy(e):
         if e["y"] <= ymin or e["y"] >= ymax:
             e["diry"] *= -1
 
-    # clamp inside
     e["x"] = clamp(e["x"], xmin, xmax)
     e["y"] = clamp(e["y"], ymin, ymax)
 
@@ -514,18 +532,16 @@ def allowed_on_green(nx, ny):
 
 
 def level2_cell_at(wx, wy):
-    # Convert world coords (-L..L) to grid cell indices
     cell_w = (2 * L) / LEVEL2_COLS
     cell_h = (2 * L) / LEVEL2_ROWS
 
     col = int((wx + L) / cell_w)
     row = int((wy + L) / cell_h)
 
-    # clamp to [0..6] so edge cases don't crash
     col = clamp(col, 0, LEVEL2_COLS - 1)
     row = clamp(row, 0, LEVEL2_ROWS - 1)
 
-    return LEVEL2_PATTERN[row][col]   # 1/2/3
+    return LEVEL2_PATTERN[row][col]   
 
 def level2_world_center_of_cell(row, col):
     cell_w = (2 * L) / LEVEL2_COLS
@@ -536,7 +552,6 @@ def level2_world_center_of_cell(row, col):
     return cx, cy
 
 def find_green_spawn_in_block(home):
-    # home is "TL", "TR", "BL", "BR"
     mid_r = LEVEL2_ROWS // 2
     mid_c = LEVEL2_COLS // 2
 
@@ -553,13 +568,12 @@ def find_green_spawn_in_block(home):
         r_range = range(0, mid_r)
         c_range = range(mid_c, LEVEL2_COLS)
 
-    # Find any green cell (assuming 2 = green in your level2 pattern)
     for r in r_range:
         for c in c_range:
             if LEVEL2_PATTERN[r][c] == 1:
                 return level2_world_center_of_cell(r, c)
 
-    # fallback: center of the block if no green found
+
     rr = (mid_r + LEVEL2_ROWS - 1) // 2 if home in ("TL", "TR") else (0 + mid_r - 1) // 2
     cc = (0 + mid_c - 1) // 2 if home in ("TL", "BL") else (mid_c + LEVEL2_COLS - 1) // 2
     return level2_world_center_of_cell(rr, cc)
@@ -577,9 +591,7 @@ def level2_rc_at(wx, wy):
     return row, col
 
 def level2_block_bounds(home):
-    # Green corner blocks are 2x2:
-    # TL: rows 5-6, cols 0-1
-    # BR: rows 0-1, cols 5-6
+
 
     cell_w = (2 * L) / LEVEL2_COLS
     cell_h = (2 * L) / LEVEL2_ROWS
@@ -593,32 +605,25 @@ def level2_block_bounds(home):
         c0, c1 = 5, 6
         r0, r1 = 0, 1
     else:
-        return None  # not needed for your two type-1 enemies
+        return None  
 
     xmin = start_x + c0 * cell_w
     xmax = start_x + (c1 + 1) * cell_w
     ymin = start_y + r0 * cell_h
     ymax = start_y + (r1 + 1) * cell_h
 
-    # keep some margin so the sphere doesn't clip outside
     margin = 25
     return xmin + margin, xmax - margin, ymin + margin, ymax - margin
 
 
 
 def level2_green_block(px, py):
-    # Return which CORNER GREEN block this point is in: "TL","TR","BL","BR" or None
-    # Only consider if tile is GREEN (==1)
+
     if level2_cell_at(px, py) != 1:
         return None
 
     row, col = level2_rc_at(px, py)
 
-    # Using your LEVEL2_PATTERN, the corner green regions are 2x2 blocks:
-    # TL: rows 5-6, cols 0-1  (top in +y direction)
-    # TR: rows 5-6, cols 5-6
-    # BL: rows 0-1, cols 0-1
-    # BR: rows 0-1, cols 5-6
 
     if row >= 5 and col <= 1:
         return "TL"
@@ -632,16 +637,11 @@ def level2_green_block(px, py):
 
 
 def allowed_on_level_2(nx, ny):
-    # boundaries (same as your old function)
     if nx < -L + player_r or nx > L - player_r:
         return False
     if ny < -L + player_r or ny > L - player_r:
         return False
 
-    # tile = level2_cell_at(nx, ny)
-
-    # # walkable = green(1) and yellow(2)
-    # return tile in (1, 2)
     
     if ny >= 432 or ny <= -432 :
         return True
@@ -698,14 +698,21 @@ def allowed_on_green_level_3(nx, ny):
     return allowed_on_level_3(nx, ny)
 
 def random_green_position():
-    for _ in range(200):   # safety limit
+    for _ in range(300):   
         x = random.uniform(-L + 40, L - 40)
         y = random.uniform(-L + 40, L - 40)
 
-        if is_green_for_current_level(x, y):
-            return x, y
+        if not is_green_for_current_level(x, y):
+            continue
+
+        #  avoid TNT zones
+        if level_3_active and too_close_to_tnt(x, y):
+            continue
+
+        return x, y
 
     return 0, 0
+
 
 
 def spawn_rewards_for_level():
@@ -902,6 +909,17 @@ def draw_tnt_bombs():
 
         glPopMatrix()
 
+def too_close_to_tnt(x, y, buffer_dist=60):
+    """
+    Returns True if (x,y) is too close to any TNT bomb.
+    buffer_dist should be larger than TNT radius.
+    """
+    for t in tnt_bombs:
+        dx = x - t["x"]
+        dy = y - t["y"]
+        if dx*dx + dy*dy <= buffer_dist * buffer_dist:
+            return True
+    return False
 
 
 def draw_enemy_level_1():
@@ -1168,7 +1186,10 @@ def draw_level3_turrets_and_bullets():
 def player_hit_by_enemy():
     global lives, game_over
     global player_x, player_y, player_z
-    global level_start_spawn_x, level_start_spawn_y
+    global level_start_spawn_x, level_start_spawn_y,guard_active
+    
+    if guard_active:
+        return
 
     if game_over:
         return
@@ -1483,6 +1504,13 @@ def keyboardListener(key, x, y):
         if can_place_portal_here(player_x, player_y):
             toggle_vertical_portals()
 
+        # ---- GUARD MODE ----
+    elif key == b'g' or key == b'G':
+        global guard_active, guard_timer, guard_last_used_score
+        if guard_is_available():
+            guard_active = True
+            guard_timer = FPS * 5      # 5 seconds
+            guard_last_used_score = score
 
     
     
@@ -1494,6 +1522,13 @@ def keyboardListener(key, x, y):
         set_active_level(3)
     elif key == b'7':
         set_active_level(4)
+        
+    if key in [b'g', b'G']:
+        if guard_is_available():
+            guard_active = True
+            guard_timer = GUARD_DURATION_FRAMES
+            guard_last_used_score = score
+        return
     
     
     try_teleport()
@@ -1970,6 +2005,13 @@ def idle():
     # Rewards still work; collisions still checked
     check_reward_collision()
     check_enemy_collision()
+        # ---- GUARD TIMER ----
+    global guard_active, guard_timer
+    if guard_active:
+        guard_timer -= 1
+        if guard_timer <= 0:
+            guard_active = False
+            guard_timer = 0
 
     glutPostRedisplay()
 
@@ -2029,12 +2071,22 @@ def showScreen():
 
     # draw player on top
     draw_player()
+    
+    if guard_active:
+        draw_guard_sphere()
 
     # draw_text(10, 770, "WASD move | 1 spawn portals")
     draw_text(10, 740, f"Player: ({player_x:.1f}, {player_y:.1f})")
     draw_text(10, 770, f"Score: {score}")
     hearts = "<3" * lives
     draw_text(10, 710, f"Lives: {hearts}")
+    # GUARD HUD 
+    if guard_is_available():
+        draw_text(10, 680, "Press G to enter Guard Mode")
+
+    if guard_active:
+        secs_left = int(math.ceil(guard_timer / FPS))
+        draw_text(10, 650, f"Guard: {secs_left}")
 
 
     if level_1_active:
