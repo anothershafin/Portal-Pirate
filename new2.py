@@ -73,14 +73,14 @@ reward_config = {
         "medium": 8,
         "big": 1,
         "medium_positions": [
-            (-500,  500),
-            ( 500,  500),
-            (-500, -500),
-            ( 500, -500),
-            (-400,  300),
-            ( 300,  400),
-            (-400, -300),
-            ( 300, -400)
+            (143,  352),
+            ( 191,  -232),
+            (119, 520),
+            ( 425, -548),
+            (-262,  222),
+            ( -136,  52),
+            (-116, -218),
+            ( -116, -520)
         ],
         
         "big_positions": [
@@ -113,7 +113,7 @@ wall_thickness = 5
 wall_height = 180
 
 
-# ---------------- Level 3 Grid ----------------
+# ---------------- Level 3 ----------------
 LEVEL3_PATTERN = [
     # 1 = green (walk + portal allowed)
     # 2 = yellow (walk allowed, portal NOT allowed)
@@ -237,17 +237,28 @@ def level2_cell_at(wx, wy):
 
 
 def allowed_on_level_2(nx, ny):
-    # boundaries (same as your old function)
     if nx < -L + player_r or nx > L - player_r:
         return False
     if ny < -L + player_r or ny > L - player_r:
         return False
 
-    tile = level2_cell_at(nx, ny)
+    # tile = level2_cell_at(nx, ny)
+    # return tile in (1, 2)
 
-    # walkable = green(1) and yellow(2)
-    return tile in (1, 2)
-
+    if ny >= 432 or ny <= -432 :
+        return True
+    
+    if ny < 432 and ny > 270:
+           if nx < -265 or nx > 265:
+            return True
+        
+    if ny < 270 and ny > -270:
+        if nx < -435 or nx > 435:
+            return True
+        
+    if ny < -270 and ny > -432:
+        if nx < -265 or nx > 265:
+            return True
         
 def level3_cell_at(wx, wy):
     cell_w = (2 * L) / LEVEL3_COLS
@@ -275,12 +286,14 @@ def allowed_on_level_3(nx, ny):
 
 
 def is_green_for_current_level(x, y):
+    
     if level_1_active:
         return allowed_on_green(x, y)
     elif level_2_active:
         return allowed_on_level_2(x, y)
     elif level_3_active:
         return allowed_on_green_level_3(x, y)
+    
     return False
 
 

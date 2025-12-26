@@ -190,8 +190,6 @@ def allowed_on_green_level_2(nx, ny):
         
 def allowed_on_green_level_3(nx, ny):
     return False
-def allowed_on_green_level_4(nx, ny):
-    return False                                            # NO level 4 -- Remove
 
 def is_green_for_current_level(x, y):
     if level_1_active:
