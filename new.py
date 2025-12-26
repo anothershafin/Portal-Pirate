@@ -175,6 +175,55 @@ def player_on_enemy_side():
         return on_right_lane(player_x)
 
 
+# ---------------- Level 2 Enemies + Bullets ----------------
+enemy_L2_type1 = []   # TL and BR
+enemy_L2_type2 = None # TR turret
+
+bullets = []          # bullets shot by type2 enemy
+
+
+def spawn_level2_enemies():
+    global enemy_L2_type1, enemy_L2_type2, bullets
+    enemy_L2_type1 = []
+    bullets = []
+
+    # Type-1 enemy in TOP-LEFT green block
+    sx, sy =level2_world_center_of_cell(6, 0)
+    enemy_L2_type1.append({
+        "type": 1,
+        "home": "TL",
+        "x": sx, "y": sy,
+        "z": player_r + 10,
+        "r": 18.0,
+        "speed": 6.0,
+        "dir": 1
+    })
+
+    # Type-1 enemy in BOTTOM-RIGHT green block
+    sx2, sy2 = level2_world_center_of_cell(0, 6)
+    enemy_L2_type1.append({
+        "type": 1,
+        "home": "BR",
+        "x": sx2, "y": sy2,
+        "z": player_r + 10,
+        "r": 18.0,
+        "speed": 6.0,
+        "dir": -1
+    })
+
+
+
+    # Type-2 enemy in TOP-RIGHT green block (fixed turret)
+    enemy_L2_type2 = {
+        "type": 2,
+        "home": "TR",
+        "x": 520, "y": 520,
+        "r": 18.0,
+        "angle": 0.0,        # spinning angle in degrees
+        "spin_speed": 2.0,   # degrees per frame
+        "fire_cd": 0         # cooldown frames
+    }
+
 def set_active_level(level_num):
     global level_1_active, level_2_active, level_3_active, level_4_active
     global lives
@@ -186,6 +235,10 @@ def set_active_level(level_num):
 
     lives = MAX_LIVES
     spawn_player_for_level(level_num)
+
+    if level_num == 2:
+        spawn_level2_enemies()
+
 
 
 def promote_level():
@@ -250,6 +303,109 @@ def level2_cell_at(wx, wy):
     row = clamp(row, 0, LEVEL2_ROWS - 1)
 
     return LEVEL2_PATTERN[row][col]   # 1/2/3
+
+def level2_world_center_of_cell(row, col):
+    cell_w = (2 * L) / LEVEL2_COLS
+    cell_h = (2 * L) / LEVEL2_ROWS
+
+    cx = -L + (col + 0.5) * cell_w
+    cy = -L + (row + 0.5) * cell_h
+    return cx, cy
+
+def find_green_spawn_in_block(home):
+    # home is "TL", "TR", "BL", "BR"
+    mid_r = LEVEL2_ROWS // 2
+    mid_c = LEVEL2_COLS // 2
+
+    if home == "TL":
+        r_range = range(mid_r, LEVEL2_ROWS)
+        c_range = range(0, mid_c)
+    elif home == "TR":
+        r_range = range(mid_r, LEVEL2_ROWS)
+        c_range = range(mid_c, LEVEL2_COLS)
+    elif home == "BL":
+        r_range = range(0, mid_r)
+        c_range = range(0, mid_c)
+    else:  # "BR"
+        r_range = range(0, mid_r)
+        c_range = range(mid_c, LEVEL2_COLS)
+
+    # Find any green cell (assuming 2 = green in your level2 pattern)
+    for r in r_range:
+        for c in c_range:
+            if LEVEL2_PATTERN[r][c] == 1:
+                return level2_world_center_of_cell(r, c)
+
+    # fallback: center of the block if no green found
+    rr = (mid_r + LEVEL2_ROWS - 1) // 2 if home in ("TL", "TR") else (0 + mid_r - 1) // 2
+    cc = (0 + mid_c - 1) // 2 if home in ("TL", "BL") else (mid_c + LEVEL2_COLS - 1) // 2
+    return level2_world_center_of_cell(rr, cc)
+
+
+
+def level2_rc_at(wx, wy):
+    cell_w = (2 * L) / LEVEL2_COLS
+    cell_h = (2 * L) / LEVEL2_ROWS
+
+    col = int((wx + L) / cell_w)
+    row = int((wy + L) / cell_h)
+    col = clamp(col, 0, LEVEL2_COLS - 1)
+    row = clamp(row, 0, LEVEL2_ROWS - 1)
+    return row, col
+
+def level2_block_bounds(home):
+    # Green corner blocks are 2x2:
+    # TL: rows 5-6, cols 0-1
+    # BR: rows 0-1, cols 5-6
+
+    cell_w = (2 * L) / LEVEL2_COLS
+    cell_h = (2 * L) / LEVEL2_ROWS
+    start_x = -L
+    start_y = -L
+
+    if home == "TL":
+        c0, c1 = 0, 1
+        r0, r1 = 5, 6
+    elif home == "BR":
+        c0, c1 = 5, 6
+        r0, r1 = 0, 1
+    else:
+        return None  # not needed for your two type-1 enemies
+
+    xmin = start_x + c0 * cell_w
+    xmax = start_x + (c1 + 1) * cell_w
+    ymin = start_y + r0 * cell_h
+    ymax = start_y + (r1 + 1) * cell_h
+
+    # keep some margin so the sphere doesn't clip outside
+    margin = 25
+    return xmin + margin, xmax - margin, ymin + margin, ymax - margin
+
+
+
+def level2_green_block(px, py):
+    # Return which CORNER GREEN block this point is in: "TL","TR","BL","BR" or None
+    # Only consider if tile is GREEN (==1)
+    if level2_cell_at(px, py) != 1:
+        return None
+
+    row, col = level2_rc_at(px, py)
+
+    # Using your LEVEL2_PATTERN, the corner green regions are 2x2 blocks:
+    # TL: rows 5-6, cols 0-1  (top in +y direction)
+    # TR: rows 5-6, cols 5-6
+    # BL: rows 0-1, cols 0-1
+    # BR: rows 0-1, cols 5-6
+
+    if row >= 5 and col <= 1:
+        return "TL"
+    if row >= 5 and col >= 5:
+        return "TR"
+    if row <= 1 and col <= 1:
+        return "BL"
+    if row <= 1 and col >= 5:
+        return "BR"
+    return None
 
 
 def allowed_on_level_2(nx, ny):
@@ -370,10 +526,11 @@ def spawn_player_for_level(level):
     global player_x, player_y
 
     if level == 1:
-        player_x, player_y = -350, -350   # original Level 1 spawn
+        player_x, player_y = -350, -350 
 
     elif level == 2:
-        player_x, player_y = random_green_position()
+        player_x, player_y = -520, -520
+
 
     elif level == 3:
         player_x, player_y = random_green_position()
@@ -428,6 +585,8 @@ def draw_enemy_level_1():
     glPopMatrix()
 
 
+
+
 def draw_rewards():
     for r in rewards:
         glPushMatrix()
@@ -460,6 +619,58 @@ def check_enemy_collision():
 
     if dx*dx + dy*dy <= (player_r + enemy1["r"])**2:
         player_hit_by_enemy()
+
+def update_bullets_level2():
+    global bullets
+
+    new_list = []
+    for b in bullets:
+        b["x"] += b["vx"]
+        b["y"] += b["vy"]
+
+        # bullet exists only inside its own green block (TR)
+        if level2_green_block(b["x"], b["y"]) != b["home"]:
+            continue
+
+        # collision with player only if player also in TR block
+        if level2_green_block(player_x, player_y) == b["home"]:
+            dx = player_x - b["x"]
+            dy = player_y - b["y"]
+            if dx*dx + dy*dy <= (player_r + b["r"])**2:
+                player_hit_by_enemy()
+                continue
+
+        new_list.append(b)
+
+    bullets = new_list
+
+def draw_level2_enemies_and_bullets():
+    # type1 enemies
+    for e in enemy_L2_type1:
+        glPushMatrix()
+        glTranslatef(e["x"], e["y"], e.get("z", player_r + 10))
+        glColor3f(0.2, 0.2, 0.8)  # blue
+        glutSolidSphere(e["r"], 16, 16)
+        glPopMatrix()
+
+    # type2 turret
+    if enemy_L2_type2 is not None:
+        t = enemy_L2_type2
+        glPushMatrix()
+        glTranslatef(t["x"], t["y"], player_r)
+        glColor3f(0.9, 0.3, 0.1)  # orange turret
+        glutSolidSphere(t["r"], 16, 16)
+        glPopMatrix()
+
+    # bullets
+    for b in bullets:
+        glPushMatrix()
+        glTranslatef(b["x"], b["y"], player_r)
+        glColor3f(1.0, 1.0, 0.2)  # yellow bullet
+        glutSolidSphere(b["r"], 10, 10)
+        glPopMatrix()
+
+
 
 def player_hit_by_enemy():
     global lives
@@ -676,41 +887,26 @@ def try_teleport():
                 return
 
 
-def draw_text(x, y, text, scale=0.35):
-    # Make HUD text immune to whatever state the 3D scene set.
-    glPushAttrib(GL_ALL_ATTRIB_BITS)
-
-    glDisable(GL_DEPTH_TEST)
-    glDisable(GL_CULL_FACE)
-    glDisable(GL_LIGHTING)
-    glDisable(GL_TEXTURE_2D)
-    glLineWidth(2.0)
-
-    # 2D projection in pixels
+def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
+    glColor3f(1, 1, 1)
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
+
     gluOrtho2D(0, 1000, 0, 800)
 
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()
 
-    glColor3f(1, 1, 1)
-    glTranslatef(x, y, 0)
-    glScalef(scale, scale, 1)
-    #print("HUD:", text)
-
+    glRasterPos2f(x, y)
     for ch in text:
-        if ord(ch) < 128:  # keep it ASCII-safe
-            glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(ch))
+        glutBitmapCharacter(font, ord(ch))
 
     glPopMatrix()
     glMatrixMode(GL_PROJECTION)
     glPopMatrix()
     glMatrixMode(GL_MODELVIEW)
-
-    glPopAttrib()
 
 
 
@@ -1051,6 +1247,83 @@ def update_enemy_level_1():
     if not allowed_on_green(enemy1["x"], enemy1["y"]):
         enemy1["dir"] *= -1
 
+def update_level2_type1_enemy(e):
+    # If player is inside enemy's green block -> chase, else patrol (simple vertical)
+    player_block = level2_green_block(player_x, player_y)
+
+    if player_block != e["home"]:
+        # patrol up/down
+        e["y"] += e["speed"] * e["dir"]
+    else:
+        # chase
+        dx = player_x - e["x"]
+        dy = player_y - e["y"]
+        dist = math.sqrt(dx*dx + dy*dy)
+        if dist > 0:
+            e["x"] += e["speed"] * (dx / dist)
+            e["y"] += e["speed"] * (dy / dist)
+
+    # keep inside its own green block: if it leaves, bounce direction and clamp back
+    if level2_green_block(e["x"], e["y"]) != e["home"]:
+        e["dir"] *= -1
+        e["y"] += 2 * e["speed"] * e["dir"]
+
+    # ✅ ALWAYS compute bounds + clamp (so 'bounds' is never undefined)
+    bounds = level2_block_bounds(e["home"])
+    if bounds is not None:
+        xmin, xmax, ymin, ymax = bounds
+        e["x"] = clamp(e["x"], xmin, xmax)
+        e["y"] = clamp(e["y"], ymin, ymax)
+
+    
+    bounds = level2_block_bounds(e["home"])
+
+def fire_bullet_from_turret(turret, vx, vy):
+    bullets.append({
+        "x": turret["x"],
+        "y": turret["y"],
+        "r": 6.0,
+        "vx": vx,
+        "vy": vy,
+        "home": turret["home"]   # "TR"
+    })
+
+
+def update_level2_type2_enemy(turret):
+    if turret is None:
+        return
+
+    # cooldown tick
+    if turret["fire_cd"] > 0:
+        turret["fire_cd"] -= 1
+
+    player_block = level2_green_block(player_x, player_y)
+    player_in_tr = (player_block == turret["home"])  # TR
+
+    # ---- Idle: spin + shoot slowly along spin direction ----
+    if not player_in_tr:
+        turret["angle"] = (turret["angle"] + turret["spin_speed"]) % 360.0
+
+        if turret["fire_cd"] == 0:
+            ang = math.radians(turret["angle"])
+            speed = 1.5  # super slow bullet speed
+            vx = speed * math.cos(ang)
+            vy = speed * math.sin(ang)
+            fire_bullet_from_turret(turret, vx, vy)
+            turret["fire_cd"] = 60  # shoot every ~60 frames
+
+    # ---- Player in TR: shoot toward player ----
+    else:
+        if turret["fire_cd"] == 0:
+            dx = player_x - turret["x"]
+            dy = player_y - turret["y"]
+            dist = math.sqrt(dx*dx + dy*dy)
+            if dist > 0:
+                speed = 2.0
+                vx = speed * (dx / dist)
+                vy = speed * (dy / dist)
+                fire_bullet_from_turret(turret, vx, vy)
+                turret["fire_cd"] = 30
 
 
 def idle():
@@ -1058,6 +1331,14 @@ def idle():
 
     if level_1_active:
         update_enemy_level_1()
+
+    if level_2_active:
+        for e in enemy_L2_type1:
+            update_level2_type1_enemy(e)
+        update_level2_type2_enemy(enemy_L2_type2)
+        update_bullets_level2()
+
+
 
 
     if speed_boost_timer > 0:
@@ -1080,6 +1361,10 @@ def showScreen():
 
     draw_environment()
     draw_rewards()
+    if level_2_active:
+        print("L2 type1 count:", len(enemy_L2_type1))
+        draw_level2_enemies_and_bullets()
+
 
     # portals should be drawn after walls exist
     draw_portals()
@@ -1117,6 +1402,9 @@ def main():
     glutIdleFunc(idle)
 
     spawn_rewards_for_level()
+    if level_2_active:
+        spawn_level2_enemies()
+
 
     
     glutMainLoop()
