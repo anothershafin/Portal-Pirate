@@ -45,6 +45,13 @@ speed_boost_timer = 0
 player_z = 0.0
 player_r = 18.0        # radius
 
+# ---------------- TNT bombs ----------------
+tnt_bombs = [
+    {"x": -476, "y": 300,  "r": 28.0},
+    {"x":  480, "y": -302, "r": 28.0},
+]
+
+
 
 
 # ---------------- Rewards ----------------
@@ -859,6 +866,37 @@ def draw_player():
     cube( 2.0*S, 0*S, -6.5*S, 4.0*S, 4.0*S, 8.0*S, *PANTS)  # right leg
 
     glPopMatrix()
+    
+def draw_tnt_bombs():
+    for t in tnt_bombs:
+        glPushMatrix()
+        glTranslatef(t["x"], t["y"], player_r + 12)
+
+        # --- left red block ---
+        glPushMatrix()
+        glTranslatef(-14, 0, 0)
+        glScalef(20, 20, 20)
+        glColor3f(1.0, 0.0, 0.0)
+        glutSolidCube(1.0)
+        glPopMatrix()
+
+        # --- middle yellow block ---
+        glPushMatrix()
+        glScalef(20, 20, 20)
+        glColor3f(1.0, 1.0, 0.0)
+        glutSolidCube(1.0)
+        glPopMatrix()
+
+        # --- right red block ---
+        glPushMatrix()
+        glTranslatef(14, 0, 0)
+        glScalef(20, 20, 20)
+        glColor3f(1.0, 0.0, 0.0)
+        glutSolidCube(1.0)
+        glPopMatrix()
+
+        glPopMatrix()
+
 
 
 def draw_enemy_level_1():
@@ -949,20 +987,7 @@ def draw_rewards():
 
         glPopMatrix()
 
-def check_enemy_collision():
-    global lives
 
-    if not level_1_active:
-        return
-
-    ex, ey = enemy1["x"], enemy1["y"]
-    px, py = player_x, player_y
-
-    dx = px - ex
-    dy = py - ey
-
-    if dx*dx + dy*dy <= (player_r + enemy1["r"])**2:
-        player_hit_by_enemy()
 
 def update_bullets_level2():
     global bullets
@@ -1045,6 +1070,14 @@ def check_enemy_collision():
                 dy = player_y - e["y"]
                 if dx*dx + dy*dy <= (player_r + e["r"])**2:
                     player_hit_by_enemy()
+        for t in tnt_bombs:
+            dx = player_x - t["x"]
+            dy = player_y - t["y"]
+            if dx*dx + dy*dy <= (player_r + t["r"])**2:
+                global lives
+                lives = 0
+                player_hit_by_enemy()
+                return
         return
 
 
@@ -1933,11 +1966,13 @@ def showScreen():
 
     draw_environment()
     draw_rewards()
+    
     if level_2_active:
         draw_level2_enemies_and_bullets()
     if level_3_active:
         draw_level3_enemies()
         draw_level3_turrets_and_bullets()
+        draw_tnt_bombs()
 
 
     # portals should be drawn after walls exist
