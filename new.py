@@ -109,6 +109,29 @@ hazard_half_width = 130
 wall_thickness = 5
 wall_height = 180
 
+
+# ---------------- Level 3 Grid ----------------
+LEVEL3_PATTERN = [
+    # 1 = green (walk + portal allowed)
+    # 2 = yellow (walk allowed, portal NOT allowed)
+    # 3 = red (blocked)
+    [1,1,1,1,1,3,3,1,1,3,1,1],
+    [3,3,3,3,3,3,3,1,1,3,1,1],
+    [1,1,1,1,1,3,3,1,1,3,1,1],
+    [1,1,1,1,1,3,3,1,1,3,1,1],
+    [2,3,3,3,3,3,3,3,3,3,3,2],
+    [2,1,1,1,1,3,3,1,1,1,1,1],
+    [1,1,1,1,1,3,3,1,1,1,1,2],
+    [2,3,3,3,3,3,3,3,3,3,3,2],
+    [1,1,3,1,1,3,3,1,1,1,1,1],
+    [1,1,3,1,1,3,3,1,1,1,1,1],
+    [1,1,3,1,1,3,3,3,3,3,3,3],
+    [1,1,3,1,1,3,3,1,1,1,1,1],
+]
+LEVEL3_ROWS=12
+LEVEL3_COLS=12
+
+
 left_inner_x  = -L + wall_thickness
 right_inner_x =  L - wall_thickness
 
@@ -138,9 +161,12 @@ def promote_level():
     if level_1_active:
         set_active_level(2)
     elif level_2_active:
-        set_active_level(1)      ## Temporarily level 1
+        set_active_level(3)
+    elif level_3_active:
+        set_active_level(1)  # or set_active_level(4) if you add level 4 later
 
     spawn_rewards_for_level()
+
 
 
 def get_active_level():
@@ -208,21 +234,45 @@ def allowed_on_level_2(nx, ny):
     return tile in (1, 2)
 
         
-def allowed_on_green_level_3(nx, ny):
-    return False
-def allowed_on_green_level_4(nx, ny):
-    return False                                            # NO level 4 -- Remove
+def level3_cell_at(wx, wy):
+    cell_w = (2 * L) / LEVEL3_COLS
+    cell_h = (2 * L) / LEVEL3_ROWS
+
+    col = int((wx + L) / cell_w)
+    row = int((wy + L) / cell_h)
+
+    col = clamp(col, 0, LEVEL3_COLS - 1)
+    row = clamp(row, 0, LEVEL3_ROWS - 1)
+
+    return LEVEL3_PATTERN[row][col]
+
+
+def allowed_on_level_3(nx, ny):
+    if nx < -L + player_r or nx > L - player_r:
+        return False
+    if ny < -L + player_r or ny > L - player_r:
+        return False
+
+    tile = level3_cell_at(nx, ny)
+
+    # walkable = green(1) and yellow(2)
+    return tile in (1, 2)
+
 
 def is_green_for_current_level(x, y):
     if level_1_active:
         return allowed_on_green(x, y)
     elif level_2_active:
-        return allowed_on_green_level_2(x, y)
+        return allowed_on_level_2(x, y)
     elif level_3_active:
         return allowed_on_green_level_3(x, y)
     elif level_4_active:
         return allowed_on_green_level_4(x, y)
     return False
+
+def allowed_on_green_level_3(nx, ny):
+    return allowed_on_level_3(nx, ny)
+
 
 
 def random_green_position():
@@ -277,15 +327,14 @@ def spawn_rewards_for_level():
             })
 
 def can_place_portal_here(px, py):
-    # level 1: keep existing behavior (always allowed on green lanes)
     if level_1_active:
         return True
-
-    # level 2: only green tiles can place portals
     if level_2_active:
         return level2_cell_at(px, py) == 1
-
+    if level_3_active:
+        return level3_cell_at(px, py) == 1
     return True
+
 
 
 def try_move(dx, dy):
@@ -301,6 +350,11 @@ def try_move(dx, dy):
     if level_2_active:
         if allowed_on_level_2(nx, ny):
             player_x, player_y = nx, ny
+            
+    if level_3_active:
+        if allowed_on_level_3(nx, ny):
+            player_x, player_y = nx, ny
+
 
 
 
@@ -461,9 +515,13 @@ def draw_portals():
 
 
 def in_minor_hazard_zone(px, py):
-    
-    if level_2_active and level2_cell_at(player_x, player_y) != 1:
-        return
+    # block teleporting unless player stands on GREEN (tile == 1)
+    if level_2_active:
+        return level2_cell_at(px, py) != 1
+    if level_3_active:
+        return level3_cell_at(px, py) != 1
+    return False
+
 
 
 def try_teleport():
@@ -789,6 +847,67 @@ def draw_level_2():
     glEnd()
 
 
+def draw_level_3():
+    color_map = {
+        1: (0.44, 0.67, 0.29),  # green
+        2: (0.95, 0.85, 0.10),  # yellow
+        3: (0.85, 0.10, 0.10),  # red
+    }
+
+    cols = LEVEL3_COLS
+    rows = LEVEL3_ROWS
+    cell_w = (2 * L) / cols
+    cell_h = (2 * L) / rows
+    start_x = -L
+    start_y = -L
+
+    glBegin(GL_QUADS)
+
+    def draw_cell(col, row, val):
+        x0 = start_x + col * cell_w
+        x1 = x0 + cell_w
+        y0 = start_y + row * cell_h
+        y1 = y0 + cell_h
+        glColor3f(*color_map[val])
+        glVertex3f(x0, y0, 0)
+        glVertex3f(x1, y0, 0)
+        glVertex3f(x1, y1, 0)
+        glVertex3f(x0, y1, 0)
+
+    for row in range(rows):
+        for col in range(cols):
+            draw_cell(col, row, LEVEL3_PATTERN[row][col])
+
+    # --- Walls (same as level 2) ---
+    glColor3f(0.70, 0.78, 0.92)
+
+    # Top wall
+    glVertex3f(-left_inner_x, L, 0)
+    glVertex3f(left_inner_x, L, 0)
+    glVertex3f(left_inner_x, L, wall_height)
+    glVertex3f(-left_inner_x, L, wall_height)
+
+    # Left wall
+    glVertex3f(-L, -L, 0)
+    glVertex3f(-L, L, 0)
+    glVertex3f(-L, L, wall_height)
+    glVertex3f(-L, -L, wall_height)
+
+    # Right wall
+    glVertex3f(right_inner_x, -L, 0)
+    glVertex3f(right_inner_x, L, 0)
+    glVertex3f(right_inner_x, L, wall_height)
+    glVertex3f(right_inner_x, -L, wall_height)
+
+    # Bottom wall
+    glVertex3f(-left_inner_x, -L, 0)
+    glVertex3f(left_inner_x, -L, 0)
+    glVertex3f(left_inner_x, -L, wall_height)
+    glVertex3f(-left_inner_x, -L, wall_height)
+
+    glEnd()
+
+
 def draw_environment():
     
     if level_1_active:
@@ -796,9 +915,8 @@ def draw_environment():
     elif level_2_active:
         draw_level_2()    
     elif level_3_active:
-        draw_level_1()  # placeholder
-    elif level_4_active:
-        draw_level_2()  # placeholder
+        draw_level_3()
+
 
 
 def idle():
