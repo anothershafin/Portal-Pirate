@@ -652,7 +652,7 @@ def allowed_on_level_2(nx, ny):
         return True
     
     if ny < 432 and ny > 270:
-           if nx < -265 or nx > 265:
+        if nx < -265 or nx > 265:
             return True
         
     if ny < 270 and ny > -270:
@@ -826,18 +826,13 @@ def try_move(dx, dy):
 
 
 def draw_player():
-    """
-    Draw player like Player.png using ONLY cubes (scaled).
-    Local coordinates: +X right, +Y forward, +Z up.
-    """
+
     glPushMatrix()
 
-    # Place character at player position
     glTranslatef(player_x, player_y, player_z + player_r)
 
-    # ---------------- helpers ----------------
     def cube(x, y, z, sx, sy, sz, r, g, b):
-        """Draw a scaled cube centered at (x,y,z) in local space."""
+
         glPushMatrix()
         glTranslatef(x, y, z)
         glScalef(sx, sy, sz)
@@ -845,40 +840,39 @@ def draw_player():
         glutSolidCube(1.0)
         glPopMatrix()
 
-    # ---------------- colors (approx Player.png) ----------------
+    # clrs-
     SKIN  = (1.0, 0.80, 0.80)
     SHIRT = (1.0, 0.00, 0.00)
     PANTS = (0.00, 0.45, 0.75)
     BLACK = (0.0, 0.0, 0.0)
 
-    # Scale of the whole avatar (tweak if you want bigger/smaller)
+    # Scale 
     S = 6.0
 
-    # ---------------- build model ----------------
-    # HEAD (skin)
+    # HEAD 
     cube(0*S, 0*S, 13*S, 6*S, 4*S, 6*S, *SKIN)
 
-    # EYES / GLASSES stripe (black) across upper head
+    # Patch
     cube(0*S, 0*S, 15*S, 6*S, 4.2*S, 0.4*S, *BLACK)
 
 
-    # LEFT EYE block (black square on stripe)
+    # LEFT EYE 
     cube(-1.5*S, -2.10*S, 14.8*S, 1.1*S, 0.25*S, 1.1*S, *BLACK)
 
-    # NECK (skin)
+    # NECK 
     cube(0*S, 0*S, 10.0*S, 2.0*S, 2.0*S, 1.5*S, *SKIN)
 
-    # TORSO (shirt red)
+    # TORSO 
     cube(0*S, 0*S, 6.0*S, 8.0*S, 4.5*S, 7.0*S, *SHIRT)
 
-    # ARMS (skin)
+    # ARMS 
     cube(-6.0*S, 0*S, 6.0*S, 3.0*S, 4.0*S, 7.0*S, *SKIN)  # left arm
     cube( 6.0*S, 0*S, 6.0*S, 3.0*S, 4.0*S, 7.0*S, *SKIN)  # right arm
 
-    # PANTS block (blue)
+    # PANTS 
     cube(0*S, 0*S, 0.5*S, 8.0*S, 4.5*S, 7.0*S, *PANTS)
 
-    # LEGS (two blue columns with a gap in middle)
+    # LEGS 
     cube(-2.0*S, 0*S, -6.5*S, 4.0*S, 4.0*S, 8.0*S, *PANTS)  # left leg
     cube( 2.0*S, 0*S, -6.5*S, 4.0*S, 4.0*S, 8.0*S, *PANTS)  # right leg
 
@@ -915,10 +909,7 @@ def draw_tnt_bombs():
         glPopMatrix()
 
 def too_close_to_tnt(x, y, buffer_dist=60):
-    """
-    Returns True if (x,y) is too close to any TNT bomb.
-    buffer_dist should be larger than TNT radius.
-    """
+
     for t in tnt_bombs:
         dx = x - t["x"]
         dy = y - t["y"]
@@ -933,7 +924,7 @@ def draw_enemy_level_1():
 
     glPushMatrix()
     glTranslatef(enemy1["x"], enemy1["y"], enemy1["z"])
-    glColor3f(0.2, 0.2, 0.8)  # blue enemy
+    glColor3f(0.2, 0.2, 0.8) 
     glutSolidSphere(enemy1["r"], 16, 16)
     glPopMatrix()
 
@@ -1025,11 +1016,10 @@ def update_bullets_level2():
         b["x"] += b["vx"]
         b["y"] += b["vy"]
 
-        # bullet exists only inside its own green block (TR)
+
         if level2_green_block(b["x"], b["y"]) != b["home"]:
             continue
 
-        # collision with player only if player also in TR block
         if level2_green_block(player_x, player_y) == b["home"]:
             dx = player_x - b["x"]
             dy = player_y - b["y"]
@@ -1055,7 +1045,7 @@ def draw_level2_enemies_and_bullets():
         t = enemy_L2_type2
         glPushMatrix()
         glTranslatef(t["x"], t["y"], player_r)
-        glColor3f(0.9, 0.3, 0.1)  # orange turret
+        glColor3f(0.9, 0.3, 0.1)  
         glutSolidSphere(t["r"], 16, 16)
         glPopMatrix()
 
@@ -1063,12 +1053,12 @@ def draw_level2_enemies_and_bullets():
     for b in bullets:
         glPushMatrix()
         glTranslatef(b["x"], b["y"], player_r)
-        glColor3f(1.0, 1.0, 0.2)  # yellow bullet
+        glColor3f(1.0, 1.0, 0.2) 
         glutSolidSphere(b["r"], 10, 10)
         glPopMatrix()
 
 def check_enemy_collision():
-    # -------- Level 1 collision --------
+    # Level 1 collision 
     if level_1_active:
         ex, ey = enemy1["x"], enemy1["y"]
         dx = player_x - ex
@@ -1077,10 +1067,10 @@ def check_enemy_collision():
             player_hit_by_enemy()
         return
 
-    # -------- Level 2 collision (type-1 enemies) --------
+    #  Level 2 collision 
     if level_2_active:
         for e in enemy_L2_type1:
-            # only collide if player is inside that enemy's green block
+
             if level2_green_block(player_x, player_y) != e["home"]:
                 continue
 
@@ -1089,10 +1079,9 @@ def check_enemy_collision():
             if dx*dx + dy*dy <= (player_r + e["r"])**2:
                 player_hit_by_enemy()
                 return
-    # -------- Level 3 collision (type-1 enemies) --------
+    # Level 3 collision 
     if level_3_active:
         for e in enemy_L3_type1:
-            # only collide if player is inside that enemy's rectangle
             if point_in_bounds(player_x, player_y, e["home_bounds"]):
                 dx = player_x - e["x"]
                 dy = player_y - e["y"]
@@ -1117,12 +1106,9 @@ def update_bullets_level2():
     for b in bullets:
         b["x"] += b["vx"]
         b["y"] += b["vy"]
-
-        # bullet exists only inside its own green block (TR)
         if level2_green_block(b["x"], b["y"]) != b["home"]:
             continue
 
-        # collision with player only if player also in TR block
         if level2_green_block(player_x, player_y) == b["home"]:
             dx = player_x - b["x"]
             dy = player_y - b["y"]
@@ -1207,7 +1193,7 @@ def player_hit_by_enemy():
         print("GAME OVER")
         return
 
-    # respawn at original spawn of the current level
+    # respawn 
     player_x = level_start_spawn_x
     player_y = level_start_spawn_y
     player_z = 0
@@ -1229,13 +1215,13 @@ def check_reward_collision():
         if dx*dx + dy*dy + dz*dz <= (player_r + r["r"])**2:
             apply_reward(r["type"])
             to_remove.append(r)
-            break  # still stop on level change
+            break 
 
     for r in to_remove:
         if r in rewards:
             rewards.remove(r)
     
-    # ---------- Phase progression ----------
+    #  Phase progression 
     if not rewards:
         advance_reward_phase()
 
@@ -1366,7 +1352,6 @@ def draw_portals():
 
 
 def in_minor_hazard_zone(px, py):
-    # block teleporting unless player stands on GREEN (tile == 1)
     if level_2_active:
         return level2_cell_at(px, py) != 1
     if level_3_active:
@@ -1397,7 +1382,7 @@ def try_teleport():
         entry_right_x = right_inner_x - player_r
         x_tol = player_speed  # 18.0
 
-        # ---- Enter LEFT portal -> Exit RIGHT portal ----
+        #  Enter LEFT portal -> Exit RIGHT portal 
         if abs(player_x - entry_left_x) <= x_tol:
             dy = player_y - portal_left["y"]
             dz = pz - portal_left["z"]
@@ -1407,7 +1392,7 @@ def try_teleport():
                 portal_cooldown = 6
                 return
 
-        # ---- Enter RIGHT portal -> Exit LEFT portal ----
+        # Enter RIGHT portal -> Exit LEFT portal 
         if abs(player_x - entry_right_x) <= x_tol:
             dy = player_y - portal_right["y"]
             dz = pz - portal_right["z"]
@@ -1422,7 +1407,7 @@ def try_teleport():
         entry_bottom_y = -L + player_r
         y_tol = player_speed
 
-        # ---- Enter TOP portal -> Exit BOTTOM ----
+        #  Enter TOP portal -> Exit BOTTOM 
         if abs(player_y - entry_top_y) <= y_tol:
             dx = player_x - portal_top["x"]
             dz = pz - portal_top["z"]
@@ -1432,7 +1417,7 @@ def try_teleport():
                 portal_cooldown = 6
                 return
 
-        # ---- Enter BOTTOM portal -> Exit TOP ----
+        #  Enter BOTTOM portal -> Exit TOP 
         if abs(player_y - entry_bottom_y) <= y_tol:
             dx = player_x - portal_bottom["x"]
             dz = pz - portal_bottom["z"]
@@ -1523,14 +1508,14 @@ def keyboardListener(key, x, y):
     global portal_cooldown, player_x, player_y, cheat_freeze_enemies
     global game_over, main_menu_active, high_score, last_score
 
-    # -------- MAIN MENU controls --------
+    #  MAIN MENU controls 
     if main_menu_active:
         if key in [b'n', b'N']:
             start_new_game()
         glutPostRedisplay()
         return
 
-    # -------- GAME OVER controls --------
+    #  GAME OVER controls 
     if game_over:
         if key in [b'r', b'R']:
             restart_level_from_game_over()
@@ -1541,9 +1526,8 @@ def keyboardListener(key, x, y):
                 high_score = score
             main_menu()
             return
-        return  # ignore other keys while frozen
+        return  
 
-    # ---- normal gameplay below ----
     if portal_cooldown > 0:
         portal_cooldown -= 1
 
@@ -1615,9 +1599,9 @@ def setupCamera():
 
     x, y, z = camera_pos
     gluLookAt(
-        x, y, z,      # camera position
-        0, 120, 0,    # look-at target (slightly forward so ground looks nicer)
-        0, 0, 1       # up vector
+        x, y, z,      
+        0, 120, 0,    
+        0, 0, 1       
     )
 
 
@@ -1628,10 +1612,7 @@ def draw_neon_oval(cx, cy, rx, ry,
                    glow =(0.20, 0.90, 1.00, 0.12),
                    outline=(0.20, 0.90, 1.00, 0.85),
                    segments=80):
-    """
-    Draw a horizontally-oval neon capsule in 2D screen space.
-    Uses the same 0..1000 x 0..800 projection as draw_text().
-    """
+
 
     glDisable(GL_DEPTH_TEST)
     glEnable(GL_BLEND)
@@ -1647,7 +1628,7 @@ def draw_neon_oval(cx, cy, rx, ry,
     glPushMatrix()
     glLoadIdentity()
 
-    # --- glow pass (bigger, softer) ---
+    #  glow pass 
     glColor4f(*glow)
     glBegin(GL_TRIANGLE_FAN)
     glVertex2f(cx, cy)
@@ -1656,7 +1637,7 @@ def draw_neon_oval(cx, cy, rx, ry,
         glVertex2f(cx + math.cos(a) * (rx * 1.08), cy + math.sin(a) * (ry * 1.25))
     glEnd()
 
-    # --- inner pass (main filled oval) ---
+    #  inner pass 
     glColor4f(*inner)
     glBegin(GL_TRIANGLE_FAN)
     glVertex2f(cx, cy)
@@ -1665,7 +1646,7 @@ def draw_neon_oval(cx, cy, rx, ry,
         glVertex2f(cx + math.cos(a) * rx, cy + math.sin(a) * ry)
     glEnd()
 
-    # --- outline pass (bright edge) ---
+    # outline pass 
     glLineWidth(3.0)
     glColor4f(*outline)
     glBegin(GL_LINE_LOOP)
@@ -1696,7 +1677,7 @@ def draw_level_1():
 
     glBegin(GL_QUADS)
 
-    # ---------- Ground (green) ----------
+    #  Ground 
     glColor3f(0.44, 0.67, 0.29)
 
     # left green strip
@@ -1711,20 +1692,19 @@ def draw_level_1():
     glVertex3f(L, L, 0)
     glVertex3f(hazard_half_width, L, 0)
 
-    # ---------- Hazardous Zone  ----------
+    # Hazardous Zone 
     glColor3f(0.8, 0.0, 0.0)
     glVertex3f(-hazard_half_width, -L, hazard_z)
     glVertex3f(hazard_half_width, -L, hazard_z)
     glVertex3f(hazard_half_width, L, hazard_z)
     glVertex3f(-hazard_half_width, L, hazard_z)
 
-    # ---------- Left wall (bluish) ----------
-    # A rectangular vertical wall along the left side of the plane.
-    glColor3f(0.70, 0.78, 0.92)  # bluish
+
+    glColor3f(0.70, 0.78, 0.92)  
     left_outer_x = -L
     left_inner_x = -L + wall_thickness
 
-    # Wall face (inner face visible from center)
+
     glVertex3f(left_inner_x, -L, 0)
     glVertex3f(left_inner_x, L, 0)
     glVertex3f(left_inner_x, L, wall_height)
@@ -1743,13 +1723,13 @@ def draw_level_1():
     # glVertex3f(left_outer_x, L, wall_height)
     # glVertex3f(left_outer_x, -L, wall_height)
 
-    # ---------- Right wall (bluish) ----------
+    #  Right wall (bluish)
     glColor3f(0.70, 0.78, 0.92)
     
     right_outer_x = L
-    right_inner_x = L #- wall_thickness
+    right_inner_x = L 
 
-    # Wall face (inner face visible from center)
+    # Wall face 
     glVertex3f(right_inner_x, -L, 0)
     glVertex3f(right_inner_x, L, 0)
     glVertex3f(right_inner_x, L, wall_height)
@@ -1780,7 +1760,7 @@ def draw_level_2():
         3: (0.85, 0.10, 0.10),  # red
     }
 
-    # Cell geometry
+
     cols = 7
     rows = 7
     cell_w = (2 * L) / cols
@@ -1810,28 +1790,28 @@ def draw_level_2():
     
     glColor3f(0.70, 0.78, 0.92)
     
-    # ---------- Top wall  ----------
+    #  Top wall  
     glVertex3f(-left_inner_x, L, 0)
     glVertex3f(left_inner_x, L, 0)
     glVertex3f(left_inner_x, L, wall_height)
     glVertex3f(-left_inner_x, L, wall_height)
     
     
-    # ---------- Left wall 
+    # Left wall 
     glVertex3f(-L, -L, 0)
     glVertex3f(-L, L, 0)
     glVertex3f(-L, L, wall_height)
     glVertex3f(-L, -L, wall_height)
     
     
-    # ---------- Right wall
+    #  Right wall
     glVertex3f(right_inner_x, -L, 0)
     glVertex3f(right_inner_x, L, 0)
     glVertex3f(right_inner_x, L, wall_height)
     glVertex3f(right_inner_x, -L, wall_height)
     
     
-     # ---------- Bottom wall  ----------
+     #  Bottom wall  
     glVertex3f(-left_inner_x, -L, 0)
     glVertex3f(left_inner_x, -L, 0)
     glVertex3f(left_inner_x, -L, wall_height)
@@ -1871,7 +1851,7 @@ def draw_level_3():
         for col in range(cols):
             draw_cell(col, row, LEVEL3_PATTERN[row][col])
 
-    # --- Walls (same as level 2) ---
+    #  Walls (same as level 2) 
     glColor3f(0.70, 0.78, 0.92)
 
     # Top wall
@@ -1917,17 +1897,17 @@ def update_enemy_level_1():
 
     ex, ey = enemy1["x"], enemy1["y"]
 
-    # -------- CASE 1: Player NOT on enemy side → patrol --------
+    #   Player NOT on enemy side
     if not player_on_enemy_side():
         enemy1["y"] += enemy1["speed"] * enemy1["dir"]
 
-        # bounce back at lane limits
+        # bounce back 
         if ey > L - 50:
             enemy1["dir"] = -1
         elif ey < -L + 50:
             enemy1["dir"] = 1
 
-    # -------- CASE 2: Player on enemy side → chase --------
+    #  Player on enemy side 
     else:
         dx = player_x - ex
         dy = player_y - ey
@@ -1937,24 +1917,24 @@ def update_enemy_level_1():
             enemy1["x"] += enemy1["speed"] * (dx / dist)
             enemy1["y"] += enemy1["speed"] * (dy / dist)
 
-    # ensure enemy never leaves green
+    # ensure s green
     if not allowed_on_green(enemy1["x"], enemy1["y"]):
         enemy1["dir"] *= -1
 
 def update_level2_type1_enemy(e):
     player_block = level2_green_block(player_x, player_y)
 
-    # Always compute bounds once
+
     bounds = level2_block_bounds(e["home"])
     if bounds is None:
         return
     xmin, xmax, ymin, ymax = bounds
 
-    # ---- PATROL when player is NOT in this enemy's block ----
+    #  NOT in this enemy's block
     if player_block != e["home"]:
         e["y"] += e["speed"] * e["dir"]
 
-        # ✅ bounce inside the block (like level 1)
+        # bounce 
         if e["y"] >= ymax:
             e["y"] = ymax
             e["dir"] = -1
@@ -1962,7 +1942,7 @@ def update_level2_type1_enemy(e):
             e["y"] = ymin
             e["dir"] = 1
 
-    # ---- CHASE when player enters this enemy's block ----
+    #  player enters this enemy's block 
     else:
         dx = player_x - e["x"]
         dy = player_y - e["y"]
@@ -1971,7 +1951,7 @@ def update_level2_type1_enemy(e):
             e["x"] += e["speed"] * (dx / dist)
             e["y"] += e["speed"] * (dy / dist)
 
-    # ✅ Clamp always (safety) so chase can't escape the block
+
     e["x"] = clamp(e["x"], xmin, xmax)
     e["y"] = clamp(e["y"], ymin, ymax)
 
@@ -1998,7 +1978,7 @@ def update_level2_type2_enemy(turret):
     player_block = level2_green_block(player_x, player_y)
     player_in_tr = (player_block == turret["home"])  # TR
 
-    # ---- Idle: spin + shoot slowly along spin direction ----
+
     if not player_in_tr:
         turret["angle"] = (turret["angle"] + turret["spin_speed"]) % 360.0
 
@@ -2010,7 +1990,7 @@ def update_level2_type2_enemy(turret):
             fire_bullet_from_turret(turret, vx, vy)
             turret["fire_cd"] = 500  
 
-    # ---- Player in TR: shoot toward player ----
+
     else:
         if turret["fire_cd"] == 0:
             dx = player_x - turret["x"]
@@ -2040,7 +2020,7 @@ def update_level3_type2_enemy(turret):
 
     in_zone = point_in_bounds(player_x, player_y, turret["home_bounds"])
 
-    # Idle: spin + shoot slowly in spin direction
+
     if not in_zone:
         turret["angle"] = (turret["angle"] + turret["spin_speed"]) % 360.0
         if turret["fire_cd"] == 0:
@@ -2066,11 +2046,11 @@ def update_bullets_level3():
         b["x"] += b["vx"]
         b["y"] += b["vy"]
 
-        # bullets only exist inside their turret zone
+
         if not point_in_bounds(b["x"], b["y"], b["home_bounds"]):
             continue
 
-        # bullet hits only if player is inside same zone
+
         if point_in_bounds(player_x, player_y, b["home_bounds"]):
             dx = player_x - b["x"]
             dy = player_y - b["y"]
@@ -2091,12 +2071,12 @@ def idle():
         return
 
 
-    # Freeze everything on game over (but keep drawing)
+
     if game_over:
         glutPostRedisplay()
         return
 
-    # ---------------- ENEMY UPDATES (paused in cheat mode) ----------------
+    # ENEMY UPDATES 
     if not cheat_freeze_enemies:
         if level_1_active:
             update_enemy_level_1()
@@ -2115,16 +2095,16 @@ def idle():
                 update_level3_type2_enemy(t)
             update_bullets_level3()
 
-    # ---------------- EVERYTHING ELSE (still runs in cheat mode) ----------------
+
     if speed_boost_timer > 0:
         speed_boost_timer -= 1
         if speed_boost_timer == 0:
             player_speed = base_player_speed
 
-    # Rewards still work; collisions still checked
+
     check_reward_collision()
     check_enemy_collision()
-        # ---- GUARD TIMER ----
+        #  GUARD TIMER 
     global guard_active, guard_timer
     if guard_active:
         guard_timer -= 1
@@ -2143,12 +2123,12 @@ def restart_level_from_game_over():
     score = 0
     game_over = False
 
-    # respawn player at original spawn of that level
+    # respawn player at original 
     player_x = level_start_spawn_x
     player_y = level_start_spawn_y
     player_z = 0
 
-    # reset level-specific things
+    # reset level
     lvl = get_active_level()
     spawn_rewards_for_level()
 
@@ -2156,8 +2136,7 @@ def restart_level_from_game_over():
         spawn_level2_enemies()
     elif lvl == 3:
         spawn_level3_enemies()
-        # also clear bullets if your level3 uses another list
-        # bullets_L3.clear()   # if needed
+
 
 
 
@@ -2194,10 +2173,10 @@ def showScreen():
         draw_tnt_bombs()
 
 
-    # portals should be drawn after walls exist
+
     draw_portals()
 
-    # draw player on top
+
     draw_player()
     
     if guard_active:
